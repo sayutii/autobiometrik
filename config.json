@@ -1,0 +1,7 @@
+{
+    "finger_path": "C:\\Program Files (x86)\\BPJS Kesehatan\\Aplikasi Sidik Jari BPJS Kesehatan\\After.exe",
+    "frista_path": "C:\\Program Files (x86)\\FRISTA\\Frista.exe",
+
+    "finger_send_peserta": false,
+    "frista_send_peserta": false
+}
