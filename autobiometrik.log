@@ -46,3 +46,25 @@
 2026-09-04 11:42:26,663 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:42:26] "GET /start_frista?no_peserta=XXX HTTP/1.1" 200 -
 2026-09-04 11:42:26,663 - ERROR - [FRISTA THREAD] File aplikasi tidak ditemukan: C:\frista\frista.exe
 2026-09-04 11:42:36,668 - INFO - Server dihentikan oleh pengguna.
+2026-09-04 12:39:19,052 - INFO - ============================================================
+2026-09-04 12:39:19,052 - INFO - AutoBiometrik BPJS Local REST Service v1.0.1
+2026-09-04 12:39:19,052 - INFO - Server berjalan pada: http://127.0.0.1:5000
+2026-09-04 12:39:19,052 - INFO - Endpoint tersedia:
+2026-09-04 12:39:19,052 - INFO -   GET http://127.0.0.1:5000/health
+2026-09-04 12:39:19,052 - INFO -   GET http://127.0.0.1:5000/start_frista?no_peserta=XXX
+2026-09-04 12:39:19,052 - INFO -   GET http://127.0.0.1:5000/start_finger?no_peserta=XXX
+2026-09-04 12:39:19,052 - INFO -   GET http://127.0.0.1:5000/stop_frista
+2026-09-04 12:39:19,052 - INFO -   GET http://127.0.0.1:5000/stop_finger
+2026-09-04 12:39:19,052 - INFO - ============================================================
+2026-09-04 12:39:34,746 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 12:39:34] "GET /health HTTP/1.1" 200 -
+2026-09-04 12:39:34,747 - INFO - [FRISTA THREAD] Memulai otomasi FRISTA untuk no_peserta: 0001234567890
+2026-09-04 12:39:34,747 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 12:39:34] "GET /start_frista?no_peserta=0001234567890 HTTP/1.1" 200 -
+2026-09-04 12:39:34,747 - ERROR - [FRISTA THREAD] File aplikasi tidak ditemukan: C:\frista\frista.exe
+2026-09-04 12:39:34,747 - INFO - [FINGER THREAD] Memulai otomasi Finger untuk no_peserta: 0001234567890
+2026-09-04 12:39:34,747 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 12:39:34] "GET /start_finger?no_peserta=0001234567890 HTTP/1.1" 200 -
+2026-09-04 12:39:34,747 - ERROR - [FINGER THREAD] File aplikasi tidak ditemukan: C:\Program Files (x86)\BPJS Kesehatan\Aplikasi Sidik Jari BPJS Kesehatan\After.exe
+2026-09-04 12:39:34,748 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 12:39:34] "GET /start_finger HTTP/1.1" 400 -
+2026-09-04 12:39:34,769 - INFO - Proses C:\frista\frista.exe berhasil dihentikan.
+2026-09-04 12:39:34,769 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 12:39:34] "GET /stop_frista HTTP/1.1" 200 -
+2026-09-04 12:39:34,784 - INFO - Proses C:\Program Files (x86)\BPJS Kesehatan\Aplikasi Sidik Jari BPJS Kesehatan\After.exe berhasil dihentikan.
+2026-09-04 12:39:34,785 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 12:39:34] "GET /stop_finger HTTP/1.1" 200 -

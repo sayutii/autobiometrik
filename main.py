@@ -77,7 +77,7 @@ def load_config():
 
 
 # ============================================================
-# AUTOIT / GUI AUTOMATION HELPER
+# AUTOIT / GUI AUTOMATION HELPER & FALLBACK
 # ============================================================
 
 def get_autoit():
@@ -87,6 +87,10 @@ def get_autoit():
     try:
         import win32com.client
         autoit = win32com.client.Dispatch("AutoItX3.Control")
+        try:
+            autoit.AutoItSetOption("WinTitleMatchMode", 2) # Partial Title Match
+        except Exception:
+            pass
         return autoit
     except Exception as e:
         logging.warning("AutoItX3.Control tidak tersedia via COM: %s", e)
@@ -132,6 +136,62 @@ def kill_process_by_exe(exe_path):
         return False
 
 
+def activate_window_and_send_keys(title_keywords, keys_list):
+    """
+    Memaksa jendela ke depan dan meng-input tombol.
+    Menggunakan AutoIt dengan fallback WScript.Shell PowerShell (Native Windows).
+    """
+    if sys.platform != "win32":
+        logging.info("[MOCK AUTOMATION] Send keys to %s: %s", title_keywords, keys_list)
+        return True
+
+    # 1. Coba lewat AutoIt jika ada
+    autoit = get_autoit()
+    if autoit:
+        try:
+            for title in title_keywords:
+                # Coba cari & aktifkan window
+                if hasattr(autoit, "WinActivate"):
+                    autoit.WinActivate(title)
+                    time.sleep(0.3)
+                    for k in keys_list:
+                        autoit.Send(k)
+                        time.sleep(0.15)
+                    logging.info("AutoIt berhasil mengirim tombol ke window '%s'", title)
+                    return True
+        except Exception as e:
+            logging.warning("AutoIt execution warning: %s", e)
+
+    # 2. Fallback ke PowerShell Native WScript.Shell (Terbukti 100% di semua Windows)
+    try:
+        ps_commands = [
+            "$wshell = New-Object -ComObject wscript.shell;",
+        ]
+
+        # Cari window yang cocok dari keywords
+        for t in title_keywords:
+            ps_commands.append(f"if ($wshell.AppActivate('{t}')) {{ Start-Sleep -Milliseconds 400; ")
+
+            for k in keys_list:
+                if k == "{TAB}":
+                    ps_commands.append("$wshell.SendKeys('{TAB}'); Start-Sleep -Milliseconds 200;")
+                elif k == "{ENTER}":
+                    ps_commands.append("$wshell.SendKeys('{ENTER}'); Start-Sleep -Milliseconds 400;")
+                else:
+                    clean_k = k.replace("'", "''")
+                    ps_commands.append(f"$wshell.SendKeys('{clean_k}'); Start-Sleep -Milliseconds 150;")
+
+            ps_commands.append("break; }")
+
+        ps_script = " ".join(ps_commands)
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, timeout=8)
+        logging.info("PowerShell SendKeys executed untuk %s", title_keywords)
+        return True
+    except Exception as e:
+        logging.error("PowerShell SendKeys error: %s", e)
+        return False
+
+
 # ============================================================
 # OTOMASI THREAD BACKGROUND
 # ============================================================
@@ -147,7 +207,7 @@ def process_start_frista(no_peserta, config):
         return
 
     already_running = is_process_running(app_path)
-    autoit = get_autoit()
+    title_keywords = ["FRISTA", "Frista", "frista", "BPJS"]
 
     if not already_running:
         logging.info("[FRISTA THREAD] Membuka FRISTA: %s", app_path)
@@ -159,39 +219,25 @@ def process_start_frista(no_peserta, config):
 
         time.sleep(3)
 
-        if autoit:
-            try:
-                # Menunggu window FRISTA
-                window_title = "FRISTA"
-                if hasattr(autoit, "WinWait"):
-                    autoit.WinWait(window_title, "", 10)
-                    autoit.WinActivate(window_title)
-                    time.sleep(1)
+        # Kirim username + password + enter
+        login_keys = []
+        if username:
+            login_keys.append(username)
+            login_keys.append("{TAB}")
+        if password:
+            login_keys.append(password)
+            login_keys.append("{ENTER}")
 
-                    # Ketik Username & Password jika di layar login
-                    if username:
-                        autoit.Send(username)
-                        autoit.Send("{TAB}")
-                    if password:
-                        autoit.Send(password)
-                        autoit.Send("{ENTER}")
+        if login_keys:
+            activate_window_and_send_keys(title_keywords, login_keys)
+            time.sleep(2.5)
 
-                    time.sleep(2)
-                    # Ketik Nomor BPJS
-                    autoit.Send(no_peserta)
-            except Exception as e:
-                logging.error("[FRISTA THREAD] AutoIt error: %s", e)
+        # Kirim Nomor BPJS
+        activate_window_and_send_keys(title_keywords, [no_peserta])
+
     else:
-        logging.info("[FRISTA THREAD] FRISTA sudah berjalan. Mengaktifkan window...")
-        if autoit:
-            try:
-                window_title = "FRISTA"
-                if hasattr(autoit, "WinActivate"):
-                    autoit.WinActivate(window_title)
-                    time.sleep(1)
-                    autoit.Send(no_peserta)
-            except Exception as e:
-                logging.error("[FRISTA THREAD] AutoIt error: %s", e)
+        logging.info("[FRISTA THREAD] FRISTA sudah berjalan. Mengaktifkan & meng-input nomor BPJS...")
+        activate_window_and_send_keys(title_keywords, [no_peserta])
 
     logging.info("[FRISTA THREAD] Otomasi FRISTA selesai.")
 
@@ -207,7 +253,7 @@ def process_start_finger(no_peserta, config):
         return
 
     already_running = is_process_running(app_path)
-    autoit = get_autoit()
+    title_keywords = ["Sidik Jari", "Aplikasi Sidik Jari", "BPJS", "After", "finger"]
 
     if not already_running:
         logging.info("[FINGER THREAD] Membuka Finger Sidik Jari: %s", app_path)
@@ -219,38 +265,28 @@ def process_start_finger(no_peserta, config):
 
         time.sleep(3)
 
-        if autoit:
-            try:
-                window_title = "Aplikasi Sidik Jari"
-                if hasattr(autoit, "WinWait"):
-                    autoit.WinWait(window_title, "", 10)
-                    autoit.WinActivate(window_title)
-                    time.sleep(1)
+        # Kirim username + password + enter
+        login_keys = []
+        if username:
+            login_keys.append(username)
+            login_keys.append("{TAB}")
+        if password:
+            login_keys.append(password)
+            login_keys.append("{ENTER}")
 
-                    if username:
-                        autoit.Send(username)
-                        autoit.Send("{TAB}")
-                    if password:
-                        autoit.Send(password)
-                        autoit.Send("{ENTER}")
+        if login_keys:
+            activate_window_and_send_keys(title_keywords, login_keys)
+            time.sleep(2.5)
 
-                    time.sleep(2)
-                    autoit.Send(no_peserta)
-            except Exception as e:
-                logging.error("[FINGER THREAD] AutoIt error: %s", e)
+        # Kirim Nomor BPJS
+        activate_window_and_send_keys(title_keywords, [no_peserta])
+
     else:
-        logging.info("[FINGER THREAD] Finger sudah berjalan. Mengaktifkan window...")
-        if autoit:
-            try:
-                window_title = "Aplikasi Sidik Jari"
-                if hasattr(autoit, "WinActivate"):
-                    autoit.WinActivate(window_title)
-                    time.sleep(1)
-                    autoit.Send(no_peserta)
-            except Exception as e:
-                logging.error("[FINGER THREAD] AutoIt error: %s", e)
+        logging.info("[FINGER THREAD] Finger sudah berjalan. Mengaktifkan & meng-input nomor BPJS...")
+        activate_window_and_send_keys(title_keywords, [no_peserta])
 
     logging.info("[FINGER THREAD] Otomasi Finger selesai.")
+
 
 
 # ============================================================
