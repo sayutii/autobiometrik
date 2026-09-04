@@ -77,6 +77,16 @@ def load_config():
 
 
 # ============================================================
+# SUBPROCESS WINDOW HIDE FLAGS
+# ============================================================
+
+if sys.platform == "win32":
+    CREATE_NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+else:
+    CREATE_NO_WINDOW = 0
+
+
+# ============================================================
 # AUTOIT / GUI AUTOMATION HELPER & FALLBACK
 # ============================================================
 
@@ -92,13 +102,11 @@ def get_autoit():
         except Exception:
             pass
         return autoit
-    except Exception as e:
-        logging.warning("AutoItX3.Control tidak tersedia via COM: %s", e)
+    except Exception:
         try:
             import autoit as pyautoit
             return pyautoit
-        except Exception as e2:
-            logging.warning("pyautoit tidak tersedia: %s", e2)
+        except Exception:
             return None
 
 
@@ -109,7 +117,7 @@ def is_process_running(exe_name):
     filename = os.path.basename(exe_name).lower()
     try:
         if sys.platform == "win32":
-            output = subprocess.check_output(["tasklist"], text=True, errors="ignore")
+            output = subprocess.check_output(["tasklist"], text=True, errors="ignore", creationflags=CREATE_NO_WINDOW)
             return filename in output.lower()
         else:
             output = subprocess.check_output(["ps", "aux"], text=True, errors="ignore")
@@ -126,7 +134,7 @@ def kill_process_by_exe(exe_path):
     filename = os.path.basename(exe_path)
     try:
         if sys.platform == "win32":
-            subprocess.run(["taskkill", "/F", "/IM", filename], capture_output=True)
+            subprocess.run(["taskkill", "/F", "/IM", filename], capture_output=True, creationflags=CREATE_NO_WINDOW)
         else:
             subprocess.run(["pkill", "-f", filename], capture_output=True)
         logging.info("Proses %s berhasil dihentikan.", filename)
@@ -136,10 +144,10 @@ def kill_process_by_exe(exe_path):
         return False
 
 
-def activate_window_and_send_keys(title_keywords, keys_list):
+def activate_window_and_send_keys(title_keywords, keys_list, max_wait_sec=10):
     """
-    Memaksa jendela ke depan dan meng-input tombol.
-    Menggunakan AutoIt dengan fallback WScript.Shell PowerShell (Native Windows).
+    Menunggu jendela muncul, memaksa jendela ke paling depan (Pop-Up),
+    dan meng-input tombol (AutoIt / PowerShell Native Fallback).
     """
     if sys.platform != "win32":
         logging.info("[MOCK AUTOMATION] Send keys to %s: %s", title_keywords, keys_list)
@@ -150,42 +158,78 @@ def activate_window_and_send_keys(title_keywords, keys_list):
     if autoit:
         try:
             for title in title_keywords:
-                # Coba cari & aktifkan window
-                if hasattr(autoit, "WinActivate"):
-                    autoit.WinActivate(title)
-                    time.sleep(0.3)
-                    for k in keys_list:
-                        autoit.Send(k)
-                        time.sleep(0.15)
-                    logging.info("AutoIt berhasil mengirim tombol ke window '%s'", title)
-                    return True
+                if hasattr(autoit, "WinWait"):
+                    if autoit.WinWait(title, "", max_wait_sec):
+                        autoit.WinActivate(title)
+                        time.sleep(0.4)
+                        for k in keys_list:
+                            autoit.Send(k)
+                            time.sleep(0.2)
+                        logging.info("AutoIt berhasil mengirim tombol ke window '%s'", title)
+                        return True
         except Exception as e:
-            logging.warning("AutoIt execution warning: %s", e)
+            logging.debug("AutoIt execution warning: %s", e)
 
-    # 2. Fallback ke PowerShell Native WScript.Shell (Terbukti 100% di semua Windows)
+    # 2. Fallback ke PowerShell Native (SetForegroundWindow + WScript.Shell)
     try:
-        ps_commands = [
-            "$wshell = New-Object -ComObject wscript.shell;",
-        ]
+        keywords_array = "@(" + ", ".join([f"'{t}'" for t in title_keywords]) + ")"
 
-        # Cari window yang cocok dari keywords
-        for t in title_keywords:
-            ps_commands.append(f"if ($wshell.AppActivate('{t}')) {{ Start-Sleep -Milliseconds 400; ")
+        ps_script = f"""
+        $keywords = {keywords_array};
+        $wshell = New-Object -ComObject wscript.shell;
+        $found = $false;
 
-            for k in keys_list:
-                if k == "{TAB}":
-                    ps_commands.append("$wshell.SendKeys('{TAB}'); Start-Sleep -Milliseconds 200;")
-                elif k == "{ENTER}":
-                    ps_commands.append("$wshell.SendKeys('{ENTER}'); Start-Sleep -Milliseconds 400;")
-                else:
-                    clean_k = k.replace("'", "''")
-                    ps_commands.append(f"$wshell.SendKeys('{clean_k}'); Start-Sleep -Milliseconds 150;")
+        # Wait loop for window to appear (polling up to {max_wait_sec} seconds)
+        for ($i = 0; $i -lt ({max_wait_sec} * 2); $i++) {{
+            foreach ($t in $keywords) {{
+                if ($wshell.AppActivate($t)) {{
+                    $found = $true;
+                    break;
+                }}
+            }}
+            if ($found) {{ break; }}
+            Start-Sleep -Milliseconds 500
+        }}
 
-            ps_commands.append("break; }")
+        if ($found) {{
+            # Force bring window to front using User32 Win32 API
+            try {{
+                $proc = Get-Process | Where-Object {{ $_.MainWindowTitle -ne '' }} | Where-Object {{ 
+                    $title = $_.MainWindowTitle; 
+                    $match = $false; 
+                    foreach ($k in $keywords) {{ if ($title -like "*$k*") {{ $match = $true; break; }} }} 
+                    $match 
+                }} | Select-Object -First 1;
+                
+                if ($proc -and $proc.MainWindowHandle -ne 0) {{
+                    $type = Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);' -Name "Win32Popup" -Namespace Win32 -PassThru;
+                    $type::ShowWindow($proc.MainWindowHandle, 9);
+                    $type::SetForegroundWindow($proc.MainWindowHandle);
+                }}
+            }} catch {{ }}
 
-        ps_script = " ".join(ps_commands)
-        subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, timeout=8)
-        logging.info("PowerShell SendKeys executed untuk %s", title_keywords)
+            Start-Sleep -Milliseconds 500;
+        """
+
+        # Append SendKeys
+        for k in keys_list:
+            if k == "{TAB}":
+                ps_script += "$wshell.SendKeys('{TAB}'); Start-Sleep -Milliseconds 250;\n"
+            elif k == "{ENTER}":
+                ps_script += "$wshell.SendKeys('{ENTER}'); Start-Sleep -Milliseconds 500;\n"
+            else:
+                clean_k = k.replace("'", "''")
+                ps_script += f"$wshell.SendKeys('{clean_k}'); Start-Sleep -Milliseconds 200;\n"
+
+        ps_script += "}\n"
+
+        subprocess.run(
+            ["powershell", "-WindowStyle", "Hidden", "-NoProfile", "-Command", ps_script],
+            capture_output=True,
+            timeout=max_wait_sec + 10,
+            creationflags=CREATE_NO_WINDOW
+        )
+        logging.info("PowerShell SendKeys executed secara silent untuk %s", title_keywords)
         return True
     except Exception as e:
         logging.error("PowerShell SendKeys error: %s", e)
@@ -207,7 +251,7 @@ def process_start_frista(no_peserta, config):
         return
 
     already_running = is_process_running(app_path)
-    title_keywords = ["FRISTA", "Frista", "frista", "BPJS"]
+    title_keywords = ["FRISTA", "Frista", "frista", "Face Recognition", "Biometrik", "BPJS", "Login", "login"]
 
     if not already_running:
         logging.info("[FRISTA THREAD] Membuka FRISTA: %s", app_path)
@@ -217,27 +261,27 @@ def process_start_frista(no_peserta, config):
             logging.error("[FRISTA THREAD] Gagal launching app: %s", e)
             return
 
-        time.sleep(3)
-
-        # Kirim username + password + enter
+        # 1. Kirim Username & Password jika diisi di config.json
         login_keys = []
         if username:
             login_keys.append(username)
             login_keys.append("{TAB}")
-        if password:
-            login_keys.append(password)
-            login_keys.append("{ENTER}")
+            if password:
+                login_keys.append(password)
+                login_keys.append("{ENTER}")
 
         if login_keys:
-            activate_window_and_send_keys(title_keywords, login_keys)
-            time.sleep(2.5)
+            logging.info("[FRISTA THREAD] Menunggu layar login & memasukkan Username/Password...")
+            activate_window_and_send_keys(title_keywords, login_keys, max_wait_sec=12)
+            time.sleep(3)
 
-        # Kirim Nomor BPJS
-        activate_window_and_send_keys(title_keywords, [no_peserta])
+        # 2. Kirim Nomor BPJS
+        logging.info("[FRISTA THREAD] Memasukkan Nomor Peserta BPJS: %s", no_peserta)
+        activate_window_and_send_keys(title_keywords, [no_peserta], max_wait_sec=8)
 
     else:
         logging.info("[FRISTA THREAD] FRISTA sudah berjalan. Mengaktifkan & meng-input nomor BPJS...")
-        activate_window_and_send_keys(title_keywords, [no_peserta])
+        activate_window_and_send_keys(title_keywords, [no_peserta], max_wait_sec=5)
 
     logging.info("[FRISTA THREAD] Otomasi FRISTA selesai.")
 
@@ -253,7 +297,7 @@ def process_start_finger(no_peserta, config):
         return
 
     already_running = is_process_running(app_path)
-    title_keywords = ["Sidik Jari", "Aplikasi Sidik Jari", "BPJS", "After", "finger"]
+    title_keywords = ["Sidik Jari", "Aplikasi Sidik Jari", "BPJS", "After", "finger", "Login", "login"]
 
     if not already_running:
         logging.info("[FINGER THREAD] Membuka Finger Sidik Jari: %s", app_path)
@@ -263,29 +307,30 @@ def process_start_finger(no_peserta, config):
             logging.error("[FINGER THREAD] Gagal launching app: %s", e)
             return
 
-        time.sleep(3)
-
-        # Kirim username + password + enter
+        # 1. Kirim Username & Password jika diisi di config.json
         login_keys = []
         if username:
             login_keys.append(username)
             login_keys.append("{TAB}")
-        if password:
-            login_keys.append(password)
-            login_keys.append("{ENTER}")
+            if password:
+                login_keys.append(password)
+                login_keys.append("{ENTER}")
 
         if login_keys:
-            activate_window_and_send_keys(title_keywords, login_keys)
-            time.sleep(2.5)
+            logging.info("[FINGER THREAD] Menunggu layar login & memasukkan Username/Password...")
+            activate_window_and_send_keys(title_keywords, login_keys, max_wait_sec=12)
+            time.sleep(3)
 
-        # Kirim Nomor BPJS
-        activate_window_and_send_keys(title_keywords, [no_peserta])
+        # 2. Kirim Nomor BPJS
+        logging.info("[FINGER THREAD] Memasukkan Nomor Peserta BPJS: %s", no_peserta)
+        activate_window_and_send_keys(title_keywords, [no_peserta], max_wait_sec=8)
 
     else:
         logging.info("[FINGER THREAD] Finger sudah berjalan. Mengaktifkan & meng-input nomor BPJS...")
-        activate_window_and_send_keys(title_keywords, [no_peserta])
+        activate_window_and_send_keys(title_keywords, [no_peserta], max_wait_sec=5)
 
     logging.info("[FINGER THREAD] Otomasi Finger selesai.")
+
 
 
 
