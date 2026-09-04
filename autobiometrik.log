@@ -1,0 +1,48 @@
+2026-09-04 11:41:03,403 - INFO - ============================================================
+2026-09-04 11:41:03,404 - INFO - AutoBiometrik BPJS Local REST Service v1.0.1
+2026-09-04 11:41:03,404 - INFO - Server berjalan pada: http://127.0.0.1:5000
+2026-09-04 11:41:03,404 - INFO - Endpoint tersedia:
+2026-09-04 11:41:03,404 - INFO -   GET http://127.0.0.1:5000/health
+2026-09-04 11:41:03,404 - INFO -   GET http://127.0.0.1:5000/start_frista?no_peserta=XXX
+2026-09-04 11:41:03,404 - INFO -   GET http://127.0.0.1:5000/start_finger?no_peserta=XXX
+2026-09-04 11:41:03,404 - INFO -   GET http://127.0.0.1:5000/stop_frista
+2026-09-04 11:41:03,404 - INFO -   GET http://127.0.0.1:5000/stop_finger
+2026-09-04 11:41:03,404 - INFO - ============================================================
+2026-09-04 11:41:09,321 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:09] "GET /health HTTP/1.1" 200 -
+2026-09-04 11:41:09,322 - INFO - [FRISTA THREAD] Memulai otomasi FRISTA untuk no_peserta: 0001234567890
+2026-09-04 11:41:09,322 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:09] "GET /start_frista?no_peserta=0001234567890 HTTP/1.1" 200 -
+2026-09-04 11:41:09,322 - ERROR - [FRISTA THREAD] File aplikasi tidak ditemukan: C:\frista\frista.exe
+2026-09-04 11:41:09,323 - INFO - [FINGER THREAD] Memulai otomasi Finger untuk no_peserta: 0001234567890
+2026-09-04 11:41:09,323 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:09] "GET /start_finger?no_peserta=0001234567890 HTTP/1.1" 200 -
+2026-09-04 11:41:09,323 - ERROR - [FINGER THREAD] File aplikasi tidak ditemukan: C:\Program Files (x86)\BPJS Kesehatan\Aplikasi Sidik Jari BPJS Kesehatan\After.exe
+2026-09-04 11:41:09,324 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:09] "GET /start_finger HTTP/1.1" 400 -
+2026-09-04 11:41:09,356 - INFO - Proses C:\frista\frista.exe berhasil dihentikan.
+2026-09-04 11:41:09,356 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:09] "GET /stop_frista HTTP/1.1" 200 -
+2026-09-04 11:41:09,375 - INFO - Proses C:\Program Files (x86)\BPJS Kesehatan\Aplikasi Sidik Jari BPJS Kesehatan\After.exe berhasil dihentikan.
+2026-09-04 11:41:09,375 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:09] "GET /stop_finger HTTP/1.1" 200 -
+2026-09-04 11:41:39,269 - INFO - ============================================================
+2026-09-04 11:41:39,274 - INFO - AutoBiometrik BPJS Local REST Service v1.0.1
+2026-09-04 11:41:39,275 - INFO - Server berjalan pada: http://127.0.0.1:5000
+2026-09-04 11:41:39,275 - INFO - Endpoint tersedia:
+2026-09-04 11:41:39,275 - INFO -   GET http://127.0.0.1:5000/health
+2026-09-04 11:41:39,275 - INFO -   GET http://127.0.0.1:5000/start_frista?no_peserta=XXX
+2026-09-04 11:41:39,275 - INFO -   GET http://127.0.0.1:5000/start_finger?no_peserta=XXX
+2026-09-04 11:41:39,275 - INFO -   GET http://127.0.0.1:5000/stop_frista
+2026-09-04 11:41:39,275 - INFO -   GET http://127.0.0.1:5000/stop_finger
+2026-09-04 11:41:39,275 - INFO - ============================================================
+2026-09-04 11:41:43,587 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:43] "GET /health HTTP/1.1" 200 -
+2026-09-04 11:41:44,102 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:44] "GET /favicon.ico HTTP/1.1" 404 -
+2026-09-04 11:41:56,189 - INFO - [FRISTA THREAD] Memulai otomasi FRISTA untuk no_peserta: XXX
+2026-09-04 11:41:56,191 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:56] "GET /start_frista?no_peserta=XXX HTTP/1.1" 200 -
+2026-09-04 11:41:56,191 - ERROR - [FRISTA THREAD] File aplikasi tidak ditemukan: C:\frista\frista.exe
+2026-09-04 11:41:56,326 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:41:56] "GET /favicon.ico HTTP/1.1" 404 -
+2026-09-04 11:42:25,759 - INFO - [FRISTA THREAD] Memulai otomasi FRISTA untuk no_peserta: XXX
+2026-09-04 11:42:25,760 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:42:25] "GET /start_frista?no_peserta=XXX HTTP/1.1" 200 -
+2026-09-04 11:42:25,760 - ERROR - [FRISTA THREAD] File aplikasi tidak ditemukan: C:\frista\frista.exe
+2026-09-04 11:42:26,236 - INFO - [FRISTA THREAD] Memulai otomasi FRISTA untuk no_peserta: XXX
+2026-09-04 11:42:26,236 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:42:26] "GET /start_frista?no_peserta=XXX HTTP/1.1" 200 -
+2026-09-04 11:42:26,237 - ERROR - [FRISTA THREAD] File aplikasi tidak ditemukan: C:\frista\frista.exe
+2026-09-04 11:42:26,663 - INFO - [FRISTA THREAD] Memulai otomasi FRISTA untuk no_peserta: XXX
+2026-09-04 11:42:26,663 - INFO - HTTP 127.0.0.1 - - [04/Sep/2026 11:42:26] "GET /start_frista?no_peserta=XXX HTTP/1.1" 200 -
+2026-09-04 11:42:26,663 - ERROR - [FRISTA THREAD] File aplikasi tidak ditemukan: C:\frista\frista.exe
+2026-09-04 11:42:36,668 - INFO - Server dihentikan oleh pengguna.

@@ -1,0 +1,5 @@
+flask>=2.0.0
+flask-cors>=3.0.0
+pywin32>=300; platform_system=="Windows"
+pyautoit>=0.4; platform_system=="Windows"
+pyinstaller>=5.0.0
